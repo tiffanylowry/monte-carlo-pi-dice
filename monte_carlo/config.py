@@ -10,3 +10,4 @@ GRID_RADIUS = CANVAS_SIZE/2
 WINDOW_CALIBRATION = "Webcam Feed - Calibration"
 WINDOW_WARPED = "Warped Grid View"
 WINDOW_SIMULATION = "Monte Carlo Dice Pi Simulation"
+WINDOW_CONVERGENCE = "Pi Convergence Analytics"

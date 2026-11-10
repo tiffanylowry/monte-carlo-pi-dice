@@ -7,9 +7,11 @@ from monte_carlo.config import (
     CANVAS_SIZE,
     WINDOW_SIMULATION,
     WINDOW_WARPED,
+    WINDOW_CONVERGENCE,
 )
 from monte_carlo.detector import detect_dice
 from monte_carlo.simulation import MonteCarloSimulation
+from monte_carlo.plotter import generate_convergence_plot
 
 def main() -> None:
     '''Initialize camera, run calibratoin, execute control loop
@@ -60,6 +62,11 @@ def main() -> None:
         cv2.imshow(WINDOW_WARPED, warped)
         cv2.imshow(WINDOW_SIMULATION, canvas)
 
+        # Display convergence plot is history exists
+        if len(sim.pi_history) > 0:
+            plot_frame = generate_convergence_plot(sim.pi_history)
+            cv2.imshow(WINDOW_CONVERGENCE, plot_frame)
+
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):
             break
@@ -72,6 +79,11 @@ def main() -> None:
             # Reset sim history
             sim.reset()
             print("Simulation reset :(. All points cleared.")
+            # Close convergrence window until there is new data
+            try:
+                cv2.destroyWindow(WINDOW_CONVERGENCE)
+            except cv2.error:
+                pass
 
     # Clean up
     cap.release()

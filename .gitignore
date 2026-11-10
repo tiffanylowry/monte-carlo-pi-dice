@@ -6,3 +6,6 @@ env/
 # Exclude Python caching directories
 **/__pycache__/
 *.pyc
+
+# Ignore notes 
+notes.md

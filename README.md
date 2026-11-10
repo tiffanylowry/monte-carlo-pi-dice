@@ -116,6 +116,7 @@ Three windows are shown: the raw calibration feed (closed after calibration), th
     ├── config.py            # Constants: canvas size, window titles
     ├── calibration.py       # Click-to-calibrate perspective transform
     ├── detector.py          # Dice detection (threshold + contours)
+    ├── plotter.py           # Headless Matplotlib convergence and error re
     └── simulation.py        # Point storage, rendering, π estimate
 ```
 
@@ -126,6 +127,7 @@ Three windows are shown: the raw calibration feed (closed after calibration), th
 | `detector.py` | Converts a warped frame to grayscale, blurs, thresholds, and returns contour centers |
 | `simulation.py` | Holds `MonteCarloSimulation`, which stores points and draws the canvas and statistics |
 | `config.py` | Single place for shared constants |
+| `plotter.py` | Generates headless convergence and absolute error plots for OpenCV display |
 
 ## Configuration
 
@@ -138,6 +140,7 @@ Shared constants live in `monte_carlo/config.py`:
 | `WINDOW_CALIBRATION` | `"Webcam Feed - Calibration"` | Calibration window title |
 | `WINDOW_WARPED` | `"Warped Grid View"` | Warped view window title |
 | `WINDOW_SIMULATION` | `"Monte Carlo Dice Pi Simulation"` | Simulation window title |
+| `WINDOW_CONVERGENCE` | `"Pi Convergence Analytics"` | Convergence & error plot window title |
 
 The webcam index is set in `main.py`: `cv2.VideoCapture(0)`. Use `0` for a built-in camera and `1` (or higher) for an external one.
 
