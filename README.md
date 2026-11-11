@@ -177,6 +177,11 @@ Tip: check the **Warped Grid View** window first. If the dice don't look clean a
 
 ## Changelog
 
+### v1.1.0
+- Added real-time convergence tracking and absolute error plotting
+- Updated simulation.py to have persistent history arrays and update history calculations
+- Added convergence display OpenCV window
+
 ### v0.1.0
 - Initial version: click-based perspective calibration, contour-based dice detection, live Monte Carlo π estimate
 
