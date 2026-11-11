@@ -7,11 +7,12 @@ import matplotlib
 matplotlib.use('Agg') # Non-interactive backend for headless renfering
 import matplotlib.pyplot as plt
 
-def generate_convergence_plot(pi_history: list[float]) -> np.ndarray:
+def generate_convergence_plot(pi_history: list[float], se_history: list[float]) -> np.ndarray:
     '''Generates a dual subplot image tracking both pi convergence and absolute error over rounds.
     
     Args:
         pi_history: List of historical pi estimates per round
+        se_history: List of historical Standard Error values per round
 
     Returns: 
         A NumPy nd array reperesnting rendered plot image in BGR format for OpenCV.
@@ -20,10 +21,20 @@ def generate_convergence_plot(pi_history: list[float]) -> np.ndarray:
     rounds = list(range(1, len(pi_history) + 1))
     errors = [abs(val - math.pi) for val in pi_history] # Note! math.pi is accurate to the 15th decimal point
 
+    # Compute 95% Confidence Intervals: Est Pi ± (1.96 * SE)
+    pi_arr = np.array(pi_history)
+    se_arr = np.array(se_history)
+    upper_ci = pi_arr + (1.96 * se_arr)
+    lower_ci = pi_arr - (1.96 * se_arr)
+
     # Plot 1: Pi estimate convergence on true pi
     ax1.plot(rounds, pi_history, marker='o', color='b', linestyle='-', linewidth=1.5, markersize=4, label=r'Est. $\pi$')
     ax1.axhline(y=math.pi, color='r', linestyle="--", label=r'True $\pi$ (3.14159...)')
     ax1.set_title(r'$\pi$ Convergence Over Time')
+
+    # Shaded confidence band
+    if len(rounds) > 0:
+        ax1.fill_between(rounds, lower_ci, upper_ci, color='b', alpha=0.2, label="95% Confidence Interval")
     ax1.set_ylabel(r"Estimated $\pi$")
     ax1.set_ylim(2.0, 4.0)
     ax1.grid(True, linestyle=":", alpha = 0.6)

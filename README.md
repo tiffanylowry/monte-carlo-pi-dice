@@ -54,6 +54,15 @@ A point `(x, y)` is inside the circle if its normalized distance from the center
 (x/W - 0.5)² + (y/H - 0.5)² ≤ 0.5²
 ```
 
+### Statistical Rigor and Bernoulli Standard Error
+To mesaure the precision of the Monte Carlo estimation as sample size ($N$) grows, each dice is treated as a **Bernoulli Trial** (success (1) if inside the circle, failure (0) if outside the circle)
+
+- **Standard Error ($\text{SE}$):** We calculate real-time standard error for binomial proportions:
+  $$\text{SE}(\hat{\pi}) = 4 \times \sqrt{\frac{\hat{p}(1 - \hat{p})}{N}}$$
+  *(where $\hat{p}$ is the proportion of successful hits inside the circle)*
+
+- **95% Confidence Intervals:** The Matplotlib analytics window renders shaded confidence envelopes ($\hat{\pi} \pm 1.96 \times \text{SE}$) around the convergence curve, visually demonstrating the **Law of Large Numbers** as sample size increases.
+
 ## Requirements
 
 - Python 3.10 or newer (the code uses `X | None` type hints)
@@ -176,6 +185,13 @@ Tip: check the **Warped Grid View** window first. If the dice don't look clean a
 - Calibration must be redone every time the program starts.
 
 ## Changelog
+
+### v1.2.0 (current)
+- **Normalized Coordinate Mapping:** Simulation math and geometry evaluation are now fully decoupled from pixel resolution. Incoming points are normalized to floating-point coordinates ($x, y \in [0.0, 1.0]$) upon detection, ensuring canvas size scalability and cleaner unit testing.
+- **Bernoulli Standard Error & 95% Confidence Intervals:** 
+  - Computes real-time standard error for binomial proportions: 
+    $$\text{SE}(\hat{\pi}) = 4 \times \sqrt{\frac{\hat{p}(1 - \hat{p})}{N}}$$
+  - Plots dynamic 95% confidence interval envelopes ($\hat{\pi} \pm 1.96 \times \text{SE}$) as shaded bands around the convergence curve in the Matplotlib analytics window, visually demonstrating the Law of Large Numbers.
 
 ### v1.1.0
 - Added real-time convergence tracking and absolute error plotting

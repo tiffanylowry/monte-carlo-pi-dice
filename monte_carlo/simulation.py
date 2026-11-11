@@ -12,17 +12,18 @@ class MonteCarloSimulation:
     def __init__(self):
         ''' Initalize Monte Carlo simulation state with an empty point array'''
         # Persisitent storage for all dice coordinates across multiple rounds
-        self.accumulated_points = []
+        self.accumulated_points: list[tuple[float, float]] = []
         self.total_counts = 0
         self.inside_counts = 0
 
         # History trackers
         self.pi_history: list[float] = []
         self.error_history: list[float] = []
+        self.se_history: list[float] = []
         self.round_timestamps: list[float] = []
 
     def add_points(self, points: list[tuple[int, int]]) -> None:
-        ''' Appends new points from round to the persistent collection, evaluate boundary conditions, and trigger statistics/history metrics
+        ''' Appends new points from round, convert points to normalized coordinates and add to the persistent collection, evaluate boundary conditions, and trigger statistics/history metrics
         Args:
             points: List of (x,y) coordinate tuples to add to simulation history.
 
@@ -33,11 +34,13 @@ class MonteCarloSimulation:
             return
 
         for px, py in points:
-            self.accumulated_points.append((px, py))
-            self.total_counts += 1
-
+            # Normalize pixel coordinates to [0.0, 1.0] domain
             nx = px / CANVAS_SIZE
             ny = py / CANVAS_SIZE
+
+            # Append normalized pixel coordinates
+            self.accumulated_points.append((nx, ny))
+            self.total_counts += 1
 
             # Normalized square distance from center
             dist_sq = (nx - 0.5) ** 2 + (ny - 0.5) ** 2
@@ -49,22 +52,35 @@ class MonteCarloSimulation:
         self._update_history()
 
     def _update_history(self) -> None:
-        '''Computes current round Pi estimate, absolute error, and appends to history logs.
+        '''Computes current round Pi estimate, absolute error, and running standard error and appends to history logs.
         
         Returns:
             None
         '''
+        if (self.total_counts > 0) :
+            p_hat = self.inside_counts / self.total_counts
+            
+            # THE POINT! Calculate Monte Carlo estimate of Pi
+            # Area Circle = pi*r^2
+            # Area Square = (2r)^2 = 4r^2
+            # AC/AS = pi/4
+            # pi = 4 * AC/AS
+            current_pi = (4.0 * p_hat)
 
-        # THE POINT! Calculate Monte Carlo estimate of Pi
-        # Area Circle = pi*r^2
-        # Area Square = (2r)^2 = 4r^2
-        # AC/AS = pi/4
-        # pi = 4 * AC/AS
-        current_pi = (4.0 * (self.inside_counts / self.total_counts)) if self.total_counts > 0 else 0.0
+            # Standard Error for Monte Carlo Bernoulli Trial
+            # SE(p_hat) = sqrt(p_hat * (1- p_hat) / N)
+            # pi_hat = 4 * p_hat therefore, SE(pi_hat) = 4 * SE(p_hat)
+            se_p = math.sqrt((p_hat * (1.0 - p_hat)) / self.total_counts)
+            current_se = 4.0 * se_p
+        else:
+            current_pi = 0.0
+            current_se = 0.0
+        
         current_error = abs(current_pi - math.pi)
 
         self.pi_history.append(current_pi)
         self.error_history.append(current_error)
+        self.se_history.append(current_se)
         self.round_timestamps.append(time.time())    
 
     def reset(self) -> None:
@@ -79,10 +95,11 @@ class MonteCarloSimulation:
         self.inside_counts = 0
         self.pi_history.clear()
         self.error_history.clear()
+        self.se_history()
         self.round_timestamps.clear()
 
     def render_canvas(self) -> np.ndarray:
-        '''Generate visual canvas window, draw athe boundary, target circle, accumulated point 
+        '''Generate visual canvas window, draw the boundary, target circle, accumulated points (converted back to pi)
         colors (blue -> inside, red -> outside), and live PI Statisitics
 
         Returns:
@@ -101,10 +118,10 @@ class MonteCarloSimulation:
             2
         )
 
-        # Evaluate each point's position relative to the circle
-        for px, py in self.accumulated_points:
-            nx = px / CANVAS_SIZE
-            ny = py / CANVAS_SIZE
+        # Evaluate each point's position  by converting normalzied floats back to pixels
+        for nx, ny in self.accumulated_points:
+            px = int(nx * CANVAS_SIZE)
+            py = int(ny * CANVAS_SIZE)
 
             # Normalized square distance from center
             dist_sq = (nx - 0.5) ** 2 + (ny - 0.5) ** 2
@@ -119,6 +136,7 @@ class MonteCarloSimulation:
         # Fetch latest metrics
         current_pi = self.pi_history[-1] if self.pi_history else 0.0
         current_error = self.error_history[-1] if self.error_history else 0.0
+        current_se = self.se_history[-1] if self.se_history else 0.0
         round_count = len(self.pi_history)
 
 
@@ -136,8 +154,19 @@ class MonteCarloSimulation:
 
         cv2.putText(
             canvas,
-            f"Rounds: {round_count} | Total Points: {self.total_counts}",
+            f"Std Err: {current_se:.4f} | Rounds: {round_count}",
             (20,80),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            (0, 0, 0),
+            2,
+            cv2.LINE_AA,
+        )
+
+        cv2.putText(
+            canvas,
+            f"Total Points: {self.total_counts}",
+            (20,120),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.8,
             (0, 0, 0),

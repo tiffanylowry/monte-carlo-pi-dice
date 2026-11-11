@@ -64,7 +64,7 @@ def main() -> None:
 
         # Display convergence plot is history exists
         if len(sim.pi_history) > 0:
-            plot_frame = generate_convergence_plot(sim.pi_history)
+            plot_frame = generate_convergence_plot(sim.pi_history, sim.se_history)
             cv2.imshow(WINDOW_CONVERGENCE, plot_frame)
 
         key = cv2.waitKey(1) & 0xFF
