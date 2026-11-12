@@ -9,3 +9,9 @@ env/
 
 # Ignore notes 
 notes.md
+
+# Monte Carlo Experimental Data & Reports (Keep directory structure, ignore generated contents)
+data/trials/*.csv
+data/reports/*.md
+!data/trials/.gitkeep
+!data/reports/.gitkeep

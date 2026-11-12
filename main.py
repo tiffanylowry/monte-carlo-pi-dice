@@ -2,6 +2,8 @@
 
 import cv2
 import time
+import os
+import datetime
 from monte_carlo.calibration import get_perspective_matrix
 from monte_carlo.config import (
     CANVAS_SIZE,
@@ -43,7 +45,7 @@ def main() -> None:
     print("1. Throw dice on grid")
     print("2. Press SPACEBAR to capture the position of the dice")
     print("3. Pick up dice for next round")
-    print("4. Press 'r' to reset, or 'q' to quit")
+    print("4. Press 'h' to toggle heatmap, 'r' to reset, or 'q' to quit")
 
     # Main event loop
     while True:
@@ -69,6 +71,21 @@ def main() -> None:
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):
+            if sim.pi_history:
+                report = sim.generate_session_report()
+
+                # Create reports directory if it doesnt exist
+                os.makedirs("data/reports", exist_ok=True)
+
+                # Generate timestamped file name
+                timestamp_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                report_filename = f"data/reports/session_report_{timestamp_str}.md"
+                
+                with open(report_filename, "w", encoding="utf-8") as f:
+                    f.write(report)
+
+                print("\n" + report)                    
+                print("[INFO] Session report successfully exported to session_report.md")
             break
         elif key == ord(" "):
             # Capture time: extract dice centers
@@ -84,6 +101,11 @@ def main() -> None:
                 cv2.destroyWindow(WINDOW_CONVERGENCE)
             except cv2.error:
                 pass
+        elif key == ord('h'):
+            is_heatmap = sim.toggle_heatmap()
+            mode_name = "Heatmap" if is_heatmap else "Discrete Points"
+            print(f"[INFO] Switched visualization mode to {mode_name}")
+
 
     # Clean up
     cap.release()

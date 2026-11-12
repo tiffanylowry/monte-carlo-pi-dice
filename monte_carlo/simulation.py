@@ -5,6 +5,8 @@ import math
 import cv2
 import numpy as np
 from .config import CANVAS_SIZE, GRID_RADIUS
+from .heatmap import render_spatial_heatmap
+from .reporting import generate_session_markdown
 
 class MonteCarloSimulation:
     '''Maintain state of oaccumulated throw points and handle rendering the simulation cavas with inscrobed circle and real-time Pi calculations'''
@@ -22,6 +24,17 @@ class MonteCarloSimulation:
         self.se_history: list[float] = []
         self.round_timestamps: list[float] = []
 
+        self.show_heatmap = False
+
+    def toggle_heatmap(self) -> bool:
+        '''Toggles between discrete points and heatmap visualizaiton mode
+
+        Returns:
+            A bool that is true if showing heatmap and false otherwise
+        '''
+        self.show_heatmap = not self.show_heatmap
+        return self.show_heatmap
+    
     def add_points(self, points: list[tuple[int, int]]) -> None:
         ''' Appends new points from round, convert points to normalized coordinates and add to the persistent collection, evaluate boundary conditions, and trigger statistics/history metrics
         Args:
@@ -100,7 +113,7 @@ class MonteCarloSimulation:
 
     def render_canvas(self) -> np.ndarray:
         '''Generate visual canvas window, draw the boundary, target circle, accumulated points (converted back to pi)
-        colors (blue -> inside, red -> outside), and live PI Statisitics
+        colors (blue -> inside, red -> outside) OR density heat map, and live PI Statisitics
 
         Returns:
             A NumPy ndarray representing the rendered canvas image
@@ -117,33 +130,36 @@ class MonteCarloSimulation:
             (0, 0, 0),
             2
         )
+        if self.show_heatmap:
+            # Go to heatmap module
+            canvas = render_spatial_heatmap(self.accumulated_points, canvas)
+        else:
+            # Evaluate each point's position  by converting normalzied floats back to pixels
+            for nx, ny in self.accumulated_points:
+                px = int(nx * CANVAS_SIZE)
+                py = int(ny * CANVAS_SIZE)
 
-        # Evaluate each point's position  by converting normalzied floats back to pixels
-        for nx, ny in self.accumulated_points:
-            px = int(nx * CANVAS_SIZE)
-            py = int(ny * CANVAS_SIZE)
+                # Normalized square distance from center
+                dist_sq = (nx - 0.5) ** 2 + (ny - 0.5) ** 2
 
-            # Normalized square distance from center
-            dist_sq = (nx - 0.5) ** 2 + (ny - 0.5) ** 2
+                if dist_sq <= 0.5**2:
+                    color = (255, 0, 0) # Blue for inside circle
+                else:
+                    color = (0, 0, 255) # Red for outside circle
 
-            if dist_sq <= 0.5**2:
-                color = (255, 0, 0) # Blue for inside circle
-            else:
-                color = (0, 0, 255) # Red for outside circle
-
-            cv2.circle(canvas, (int(px), int(py)), 3, color, -1)
+                cv2.circle(canvas, (int(px), int(py)), 3, color, -1)
 
         # Fetch latest metrics
         current_pi = self.pi_history[-1] if self.pi_history else 0.0
         current_error = self.error_history[-1] if self.error_history else 0.0
         current_se = self.se_history[-1] if self.se_history else 0.0
         round_count = len(self.pi_history)
-
+        mode_str = "Heatmap (H)" if self.show_heatmap else "Points (H)"
 
         # Render metrix text on canvas
         cv2.putText(
             canvas,
-            f"Estimated PI = {current_pi:.5f} | Err: {current_error:.4f}",
+            f"Estimated PI = {current_pi:.5f} | Err: {current_error:.4f} [{mode_str}]",
             (20,40),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.8,
@@ -175,3 +191,14 @@ class MonteCarloSimulation:
         )
 
         return canvas
+
+    def generate_session_report(self) -> str:
+            '''Delegates session report generation to reporting.py module.'''
+            return generate_session_markdown(
+                self.pi_history,
+                self.error_history,
+                self.se_history,
+                self.round_timestamps,
+                self.total_counts,
+                self.inside_counts
+            )

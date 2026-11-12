@@ -112,21 +112,25 @@ Three windows are shown: the raw calibration feed (closed after calibration), th
 | `q` | Calibration / Simulation | Quit |
 | `Space` | Simulation | Capture the current dice positions |
 | `r` | Simulation | Reset all accumulated points |
+| `h` | Simulation | Toggle between discrete points and heatmap |
 
 ## Project Structure
 
 ```
-.
-├── main.py                  # Entry point: camera, calibration, main loop
-├── requirements.txt         # Python dependencies
-├── README.md
-└── monte_carlo/
-    ├── __init__.py          # Package marker
-    ├── config.py            # Constants: canvas size, window titles
-    ├── calibration.py       # Click-to-calibrate perspective transform
-    ├── detector.py          # Dice detection (threshold + contours)
-    ├── plotter.py           # Headless Matplotlib convergence and error re
-    └── simulation.py        # Point storage, rendering, π estimate
+├── data/
+│   ├── trials/                  # Exported raw point CSV logs (set up for v1.4.0)
+│   └── reports/                 # Timestamped Markdown session performance reports
+├── monte_carlo_pi/
+│   ├── __init__.py
+│   ├── calibration.py           # Perspective warp & grid corner setup
+│   ├── config.py                # Global constants, window names, & dimensions
+│   ├── detector.py              # Computer vision dice contour extraction
+│   ├── simulation.py            # Core math, point normalization, & history state
+│   ├── plotter.py               # Matplotlib convergence plots & 95% confidence intervals
+│   ├── heatmap.py               # 2D Gaussian density estimation & colormap rendering
+│   └── reporting.py             # Markdown performance report generator
+├── main.py                      # Primary execution loop & event orchestrator
+└── README.md
 ```
 
 | Module | Responsibility |
@@ -135,6 +139,8 @@ Three windows are shown: the raw calibration feed (closed after calibration), th
 | `calibration.py` | Collects four mouse clicks and builds a 3×3 perspective matrix |
 | `detector.py` | Converts a warped frame to grayscale, blurs, thresholds, and returns contour centers |
 | `simulation.py` | Holds `MonteCarloSimulation`, which stores points and draws the canvas and statistics |
+| `heatmap.py` | Generates smoothed 2D Gaussian density histograms and applies OpenCV colormap thermal gradients for spatial bias analysis |
+| `reporting.py` | Compiles experimental session performance metrics and exports timestamped Markdown reports to `data/reports/` |
 | `config.py` | Single place for shared constants |
 | `plotter.py` | Generates headless convergence and absolute error plots for OpenCV display |
 
@@ -186,7 +192,17 @@ Tip: check the **Warped Grid View** window first. If the dice don't look clean a
 
 ## Changelog
 
-### v1.2.0 (current)
+### v1.3.0 (current)
+- **Spatial Density Heatmaps (`monte_carlo_pi/heatmap.py`):** 
+  - Generates smoothed 2D Gaussian density histograms from normalized coordinate points.
+  - Implements an interactive toggle (`'h'`) to switch between discrete point markers and a vibrant colormap thermal gradient view to detect physical dice throw clustering and bias.
+- **Post-Session Markdown Reports (`monte_carlo_pi/reporting.py`):** 
+  - Automatically compiles session analytics upon quitting (`'q'`), capturing total rounds, sample counts ($N$), final Pi accuracy, and 95% confidence intervals.
+  - Exports timestamped summary reports directly to `data/reports/` for portfolio audits and the TAMU DEEp program showcase.
+- **Gitignore File Cleanup:** 
+  - Added a comprehensive `.gitignore` policy to keep local experimental CSV trials and markdown reports untracked.
+
+### v1.2.0
 - **Normalized Coordinate Mapping:** Simulation math and geometry evaluation are now fully decoupled from pixel resolution. Incoming points are normalized to floating-point coordinates ($x, y \in [0.0, 1.0]$) upon detection, ensuring canvas size scalability and cleaner unit testing.
 - **Bernoulli Standard Error & 95% Confidence Intervals:** 
   - Computes real-time standard error for binomial proportions: 
