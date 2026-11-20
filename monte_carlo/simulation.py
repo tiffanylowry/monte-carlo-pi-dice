@@ -7,9 +7,17 @@ import numpy as np
 from .config import CANVAS_SIZE, GRID_RADIUS
 from .heatmap import render_spatial_heatmap
 from .reporting import generate_session_markdown
+from .statistics import (
+    compute_absolute_error,
+    compute_pi_estimate,
+    compute_standard_error,
+    is_inside_inscribed_circle,
+    evaluate_spatial_uniformity,
+    is_spatially_uniform
+)
 
 class MonteCarloSimulation:
-    '''Maintain state of oaccumulated throw points and handle rendering the simulation cavas with inscrobed circle and real-time Pi calculations'''
+    '''Maintain state of accumulated throw points and handle rendering the simulation cavas with inscrobed circle and real-time Pi calculations'''
 
     def __init__(self):
         ''' Initalize Monte Carlo simulation state with an empty point array'''
@@ -23,6 +31,7 @@ class MonteCarloSimulation:
         self.error_history: list[float] = []
         self.se_history: list[float] = []
         self.round_timestamps: list[float] = []
+        self.current_uniformity: tuple[float, float] | None = None
 
         self.show_heatmap = False
 
@@ -55,10 +64,7 @@ class MonteCarloSimulation:
             self.accumulated_points.append((nx, ny))
             self.total_counts += 1
 
-            # Normalized square distance from center
-            dist_sq = (nx - 0.5) ** 2 + (ny - 0.5) ** 2
-
-            if dist_sq <= 0.5**2:
+            if is_inside_inscribed_circle(nx, ny):
                 self.inside_counts += 1
 
         # Trigger calculations and history logging
@@ -70,26 +76,10 @@ class MonteCarloSimulation:
         Returns:
             None
         '''
-        if (self.total_counts > 0) :
-            p_hat = self.inside_counts / self.total_counts
-            
-            # THE POINT! Calculate Monte Carlo estimate of Pi
-            # Area Circle = pi*r^2
-            # Area Square = (2r)^2 = 4r^2
-            # AC/AS = pi/4
-            # pi = 4 * AC/AS
-            current_pi = (4.0 * p_hat)
-
-            # Standard Error for Monte Carlo Bernoulli Trial
-            # SE(p_hat) = sqrt(p_hat * (1- p_hat) / N)
-            # pi_hat = 4 * p_hat therefore, SE(pi_hat) = 4 * SE(p_hat)
-            se_p = math.sqrt((p_hat * (1.0 - p_hat)) / self.total_counts)
-            current_se = 4.0 * se_p
-        else:
-            current_pi = 0.0
-            current_se = 0.0
-        
-        current_error = abs(current_pi - math.pi)
+        current_pi = compute_pi_estimate(self.inside_counts, self.total_counts)
+        current_se = compute_standard_error(self.inside_counts, self.total_counts)
+        current_error = compute_absolute_error(current_pi)
+        self.current_uniformity = evaluate_spatial_uniformity(self.accumulated_points)
 
         self.pi_history.append(current_pi)
         self.error_history.append(current_error)
@@ -108,8 +98,9 @@ class MonteCarloSimulation:
         self.inside_counts = 0
         self.pi_history.clear()
         self.error_history.clear()
-        self.se_history()
+        self.se_history.clear()
         self.round_timestamps.clear()
+        self.current_uniformity = None
 
     def render_canvas(self) -> np.ndarray:
         '''Generate visual canvas window, draw the boundary, target circle, accumulated points (converted back to pi)
@@ -139,10 +130,7 @@ class MonteCarloSimulation:
                 px = int(nx * CANVAS_SIZE)
                 py = int(ny * CANVAS_SIZE)
 
-                # Normalized square distance from center
-                dist_sq = (nx - 0.5) ** 2 + (ny - 0.5) ** 2
-
-                if dist_sq <= 0.5**2:
+                if is_inside_inscribed_circle:
                     color = (255, 0, 0) # Blue for inside circle
                 else:
                     color = (0, 0, 255) # Red for outside circle
@@ -155,6 +143,13 @@ class MonteCarloSimulation:
         current_se = self.se_history[-1] if self.se_history else 0.0
         round_count = len(self.pi_history)
         mode_str = "Heatmap (H)" if self.show_heatmap else "Points (H)"
+
+        if self.current_uniformity is None:
+            uniformity_str = "Uniformity: Low N"
+        else:
+            _, p_val = self.current_uniformity
+            flag = "OK" if is_spatially_uniform(p_val) else "BIASED"
+            uniformity_str = f"Uniformity p={p_val:.2f} [{flag}]"
 
         # Render metrix text on canvas
         cv2.putText(
@@ -181,7 +176,7 @@ class MonteCarloSimulation:
 
         cv2.putText(
             canvas,
-            f"Total Points: {self.total_counts}",
+            f"Total Points: {self.total_counts} | {uniformity_str}",
             (20,120),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.8,
@@ -200,5 +195,7 @@ class MonteCarloSimulation:
                 self.se_history,
                 self.round_timestamps,
                 self.total_counts,
-                self.inside_counts
+                self.inside_counts,
+                self.accumulated_points,
+                self.current_uniformity,
             )

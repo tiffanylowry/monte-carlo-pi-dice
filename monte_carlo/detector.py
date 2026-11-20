@@ -16,10 +16,10 @@ def detect_dice(warped_frame: cv2.Mat) -> list[tuple[int,int]]:
     gray = cv2.cvtColor(warped_frame, cv2.COLOR_BGR2GRAY)
 
     # Blur image to reduce noise
-    blurred = cv2.GaussianBlur(gray, (7, 7), 0)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
     # Binary inversion thresholding to isolate dice objects from paper
-    _, thresh = cv2.threshold(blurred, 140, 255, cv2.THRESH_BINARY_INV)
+    _, thresh = cv2.threshold(blurred, 65, 80, cv2.THRESH_BINARY_INV)
 
     # Find external object contors
     contours, _ = cv2.findContours(
@@ -31,7 +31,7 @@ def detect_dice(warped_frame: cv2.Mat) -> list[tuple[int,int]]:
         area = cv2.contourArea(ct)
 
         # Filter contours by pixel area bounds to ignore noise and shadows
-        if 40 < area < 4000:
+        if 60 < area < 400:
             M = cv2.moments(ct)
             if M["m00"] > 0:
                 # Calculate image moments to find center of the dice

@@ -6,26 +6,27 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg') # Non-interactive backend for headless renfering
 import matplotlib.pyplot as plt
+from .statistics import compute_confidence_interval_95
 
-def generate_convergence_plot(pi_history: list[float], se_history: list[float]) -> np.ndarray:
+def generate_convergence_plot(pi_history: list[float], se_history: list[float], error_history: list[float],) -> np.ndarray:
     '''Generates a dual subplot image tracking both pi convergence and absolute error over rounds.
     
     Args:
         pi_history: List of historical pi estimates per round
         se_history: List of historical Standard Error values per round
+        error_history: List of historical absolute error values per round
 
     Returns: 
         A NumPy nd array reperesnting rendered plot image in BGR format for OpenCV.
     '''
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 5), dpi=100)
     rounds = list(range(1, len(pi_history) + 1))
-    errors = [abs(val - math.pi) for val in pi_history] # Note! math.pi is accurate to the 15th decimal point
 
     # Compute 95% Confidence Intervals: Est Pi ± (1.96 * SE)
-    pi_arr = np.array(pi_history)
-    se_arr = np.array(se_history)
-    upper_ci = pi_arr + (1.96 * se_arr)
-    lower_ci = pi_arr - (1.96 * se_arr)
+    ci_bounds = [compute_confidence_interval_95(pi_val, se_val)
+                 for pi_val, se_val in zip(pi_history, se_history)]
+    lower_ci = [b[0] for b in ci_bounds]
+    upper_ci = [b[1] for b in ci_bounds]
 
     # Plot 1: Pi estimate convergence on true pi
     ax1.plot(rounds, pi_history, marker='o', color='b', linestyle='-', linewidth=1.5, markersize=4, label=r'Est. $\pi$')
@@ -41,7 +42,7 @@ def generate_convergence_plot(pi_history: list[float], se_history: list[float]) 
     ax1.legend(loc='upper right', fontsize=8)
 
     # Plot 2: Absolute error magnitude
-    ax2.plot(rounds, errors, marker='x', color='r', linestyle='-', linewidth=1.5, markersize=4)
+    ax2.plot(rounds, error_history, marker='x', color='r', linestyle='-', linewidth=1.5, markersize=4)
     ax2.set_title(r"Absolute Error ($|\hat{\pi} - \pi|$)")
     ax2.set_xlabel("Capture Rounds")
     ax2.set_ylabel("Error Magnitude")

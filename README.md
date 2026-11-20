@@ -63,6 +63,13 @@ To mesaure the precision of the Monte Carlo estimation as sample size ($N$) grow
 
 - **95% Confidence Intervals:** The Matplotlib analytics window renders shaded confidence envelopes ($\hat{\pi} \pm 1.96 \times \text{SE}$) around the convergence curve, visually demonstrating the **Law of Large Numbers** as sample size increases.
 
+- **Chi-Square Spatial Uniformity Test:** To test whether detected dice coordinates are distributed uniformly across the normalized simulation grid, the canvas is partitioned into an equal area $G \times G$ spatial grid containing $k = G^2$ (with  $G = 5$ and $k = 25$ bins by default) with expected count $E = N / k$ per bin for $N$ total points. When $E \ge E_{\min}$ ($5.0$ by default), the Chi-Square statistic tests uniform spatial dispersion with $k-1$ degrees of freedom.
+
+  $$\chi^2 = \sum_{j=1}^{k} \frac{(O_j - E)^2}{E}, \quad p = P\bigl(\chi^2_{k - 1} \ge \chi^2_{\text{obs}}\bigr)$$
+
+  At $\alpha = 0.05$, $p \ge 0.05$ is consistent with spatial uniformity, while $p < 0.05$ suggests non-uniformity (such as throw clustering or calibration/lighting bias). For more information, look at [SciPy's chisquare documentation](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.chisquare.html)
+
+
 ## Requirements
 
 - Python 3.10 or newer (the code uses `X | None` type hints)
@@ -125,7 +132,8 @@ Three windows are shown: the raw calibration feed (closed after calibration), th
 │   ├── calibration.py           # Perspective warp & grid corner setup
 │   ├── config.py                # Global constants, window names, & dimensions
 │   ├── detector.py              # Computer vision dice contour extraction
-│   ├── simulation.py            # Core math, point normalization, & history state
+│   ├── simulation.py            # State management, point normalization, & canvas rendering
+│   ├── statistics.py            # Core math, circle checks, pi/error/SE/Confidence interval, Chi-Square test
 │   ├── plotter.py               # Matplotlib convergence plots & 95% confidence intervals
 │   ├── heatmap.py               # 2D Gaussian density estimation & colormap rendering
 │   └── reporting.py             # Markdown performance report generator
@@ -139,6 +147,7 @@ Three windows are shown: the raw calibration feed (closed after calibration), th
 | `calibration.py` | Collects four mouse clicks and builds a 3×3 perspective matrix |
 | `detector.py` | Converts a warped frame to grayscale, blurs, thresholds, and returns contour centers |
 | `simulation.py` | Holds `MonteCarloSimulation`, which stores points and draws the canvas and statistics |
+| `simulation.py` | Provides inscribed circle checks, $\hat{\pi}$, absolute error, Bernoulli standard error, 95% confidence intervals, and Chi-Square spatial uniformity testing  |
 | `heatmap.py` | Generates smoothed 2D Gaussian density histograms and applies OpenCV colormap thermal gradients for spatial bias analysis |
 | `reporting.py` | Compiles experimental session performance metrics and exports timestamped Markdown reports to `data/reports/` |
 | `config.py` | Single place for shared constants |
@@ -192,7 +201,18 @@ Tip: check the **Warped Grid View** window first. If the dice don't look clean a
 
 ## Changelog
 
-### v1.3.0 (current)
+### v1.3.1 (current)
+- **Statistics Centralization (`monte_carlo_pi/statistics.py`):**
+  - Centralized geometry checks, $\hat{\pi}$ estimation, absolute error, Bernoulli standard error, 95% confidence interval calculations.
+  - Implements a Chi-Square goodness of fit test over normalized coordinate bins with sample-size guard rails
+- **Uniformity Integration (`monte_carlo_pi/simulation.py`, `monte_carlo_pi/reporting.py`):**
+  - Evaluates spatial uniformity once per round in '_update_history()' and displays unifromity status on the simulation HUD.
+  - Added Chi-Square test statistics, $p$-values, and uniformity assessments in post-session markdown reports
+- **Misc. Updates (`monte_carlo_pi/plotter.py`, `requirements.txt`):**
+  - Updates 'generate_convergence_plot' to accept pre-computer 'error_history' and computer 95% confidence interval with 'statistsics.py'
+  - Added 'scipy' to 'requirements.txt' to support 'scipy.stats.chisquare'
+
+### v1.3.0 
 - **Spatial Density Heatmaps (`monte_carlo_pi/heatmap.py`):** 
   - Generates smoothed 2D Gaussian density histograms from normalized coordinate points.
   - Implements an interactive toggle (`'h'`) to switch between discrete point markers and a vibrant colormap thermal gradient view to detect physical dice throw clustering and bias.
@@ -220,7 +240,7 @@ Tip: check the **Warped Grid View** window first. If the dice don't look clean a
 ## Acknowledgments
 
 - Built as part of the [Texas A&M University DEEP program](https://artsci.tamu.edu/physics-astronomy/outreach/deep/index.html), Department of Physics & Astronomy outreach.
-- Built with [OpenCV](https://opencv.org/) and [NumPy](https://numpy.org/).
+- Built with [OpenCV](https://opencv.org/), [NumPy](https://numpy.org/), [Matplotlib](https://matplotlib.org/), and [SciPy](https://scipy.org/).
 
 ## License
 
